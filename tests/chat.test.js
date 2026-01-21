@@ -76,12 +76,12 @@ describe('Chat Stream Endpoint', () => {
     expect(response.headers['content-type']).toContain('text/event-stream');
   }, 10000); // Increase timeout for streaming response
 
-  test('POST /v1/chat/stream should use provided collection name', async () => {
+  test('POST /v1/chat/stream should use provided conversation ID', async () => {
     const validRequest = {
       messages: [
         { role: 'user', content: 'What is AI?' }
       ],
-      collection_name: 'test_collection_123'
+      conversationId: 'test_conv_123'
     };
 
     const response = await request(app)
@@ -91,10 +91,10 @@ describe('Chat Stream Endpoint', () => {
 
     // Check that the response is SSE format
     expect(response.headers['content-type']).toContain('text/event-stream');
-    // Note: We can't easily test the collection name in the SSE stream in this test
+    // Note: We can't easily test the conversation ID in the SSE stream in this test
   }, 10000); // Increase timeout for streaming response
 
-  test('POST /v1/chat/stream should generate unique collection name when not provided', async () => {
+  test('POST /v1/chat/stream should generate unique conversation ID when not provided', async () => {
     const validRequest = {
       messages: [
         { role: 'user', content: 'What is AI?' }
@@ -111,7 +111,7 @@ describe('Chat Stream Endpoint', () => {
     expect(response.headers['content-type']).toContain('text/event-stream');
   }, 10000); // Increase timeout for streaming response
 
-  test('POST /v1/chat/stream should generate unique collection name when empty string provided', async () => {
+  test('POST /v1/chat/stream should generate unique conversation ID when empty string provided', async () => {
     const validRequest = {
       messages: [
         { role: 'user', content: 'What is AI?' }

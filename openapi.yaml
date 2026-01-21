@@ -18,7 +18,7 @@ info:
     
     data: {"type":"token","content":" there!"}
     
-    data: {"type":"done","collection_name":"conv_123"}
+    data: {"type":"done","conversationId":"conv_123"}
     ```
 servers:
   # Added by API Auto Mocking Plugin
@@ -86,7 +86,7 @@ paths:
                     
                     data: {"type":"token","content":" is"}
                     
-                    data: {"type":"done", "collection_name":"fact_check_20250620_161634"}
+                    data: {"type":"done", "conversationId":"fact_check_20250620_161634"}
                     
                 errorStream:
                   summary: Error during streaming
@@ -154,9 +154,9 @@ components:
             type: string
           description: Array of IDs of relevant fact-checks
           example: ["1258", "4589"]
-        collection_name:
+        conversationId:
           type: string
-          description: Collection name (used especially for backend). Should be unique (e.g., using timestamp).
+          description: Conversation ID (used especially for backend). Should be unique (e.g., using timestamp).
           example: "fact_check_20250620_161634"
     Message:
       type: object

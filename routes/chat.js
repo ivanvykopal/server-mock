@@ -13,11 +13,11 @@ require("../mocks/responses");
 const router = express.Router();
 
 /**
- * Generate a unique collection name
- * @returns {string} A unique collection name
+ * Generate a unique conversation ID
+ * @returns {string} A unique conversation ID
  */
-function generateUniqueCollectionName() {
-  return 'collection_' + crypto.randomBytes(16).toString('hex');
+function generateUniqueConversationId() {
+  return 'conv_' + crypto.randomBytes(16).toString('hex');
 }
 
 function pythonLiteralToJson(str) {
@@ -113,14 +113,14 @@ function safeJSONParse(str) {
  */
 router.post("/stream", async (req, res) => {
   // Validate request body
-  let { messages, ids, collection_name } = req.body;
+  let { messages, ids, conversationId } = req.body;
 
-  // Handle collection name - use provided one or generate unique one
-  if (!collection_name || collection_name.trim() === '') {
-    collection_name = generateUniqueCollectionName();
-    console.log('Generated unique collection name:', collection_name);
+  // Handle conversation ID - use provided one or generate unique one
+  if (!conversationId || conversationId.trim() === '') {
+    conversationId = generateUniqueConversationId();
+    console.log('Generated unique conversation ID:', conversationId);
   } else {
-    console.log('Using provided collection name:', collection_name);
+    console.log('Using provided conversation ID:', conversationId);
   }
 
   // Check if messages array exists and has at least one message
@@ -202,7 +202,7 @@ router.post("/stream", async (req, res) => {
         setTimeout(streamToken, delay);
       } else if (tokenIndex >= tokens.length && !res.writableEnded) {
         // Send done event when all tokens are sent
-        sendDone(res, collection_name);
+        sendDone(res, conversationId);
         res.end();
       }
     };
