@@ -25,7 +25,9 @@ Streams chat responses using Server-Sent Events.
       "role": "user",
       "content": "What is AI?"
     }
-  ]
+  ],
+  "collection_name": "factcheck_123",
+  "ids": [1, 2, 3]
 }
 ```
 
