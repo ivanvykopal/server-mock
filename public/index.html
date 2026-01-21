@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Streaming Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        #chat-container {
+            margin-top: 20px;
+        }
+        #messages {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #fafafa;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #user-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chatbot Streaming Client</h1>
+        <div id="chat-container">
+            <div id="messages">Welcome! Enter a message to start chatting.</div>
+            <input type="text" id="user-input" placeholder="Type your message here..." />
+            <button id="send-btn">Send Message</button>
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        class ChatClient {
+            constructor() {
+                // Use absolute URL to avoid CORS issues when frontend and backend are on different ports
+                this.apiUrl = 'http://localhost:8100/v1/chat/stream';
+                this.messagesDiv = document.getElementById('messages');
+                this.userInput = document.getElementById('user-input');
+                this.sendBtn = document.getElementById('send-btn');
+                this.statusDiv = document.getElementById('status');
+                this.eventSource = null;
+
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+            }
+
+            updateStatus(message) {
+                this.statusDiv.textContent = message;
+            }
+
+            addMessage(content, isUser = false) {
+                const messageElement = document.createElement('div');
+                messageElement.style.marginBottom = '10px';
+                messageElement.style.padding = '5px';
+
+                if (isUser) {
+                    messageElement.style.backgroundColor = '#e3f2fd';
+                    messageElement.style.textAlign = 'right';
+                    messageElement.innerHTML = `<strong>You:</strong> ${content}`;
+                } else {
+                    messageElement.innerHTML = content;
+                }
+
+                this.messagesDiv.appendChild(messageElement);
+                this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+            }
+
+            clearMessages() {
+                this.messagesDiv.innerHTML = '';
+            }
+
+            sendMessage() {
+                const message = this.userInput.value.trim();
+                if (!message) {
+                    alert('Please enter a message');
+                    return;
+                }
+
+                // Disable input while processing
+                this.userInput.disabled = true;
+                this.sendBtn.disabled = true;
+                this.updateStatus('Connecting to chatbot...');
+
+                // Add user message to chat
+                this.addMessage(message, true);
+                this.userInput.value = '';
+
+                // Create the request payload
+                const payload = {
+                    messages: [
+                        { role: 'user', content: message }
+                    ]
+                };
+
+                // Close any existing connection
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+
+                // Create a new EventSource connection
+                try {
+                    // We'll use fetch API instead of EventSource for more control
+                    this.handleStreamingResponse(payload);
+                } catch (error) {
+                    this.handleError(error);
+                }
+            }
+
+            async handleStreamingResponse(payload) {
+                try {
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    if (!response.body) {
+                        throw new Error('ReadableStream not supported');
+                    }
+
+                    this.updateStatus('Receiving response...');
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let accumulatedData = '';
+                    let assistantResponse = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            break;
+                        }
+
+                        // Decode the chunk and add to accumulated data
+                        accumulatedData += decoder.decode(value, { stream: true });
+
+                        // Process complete lines
+                        const lines = accumulatedData.split('\n');
+                        accumulatedData = lines.pop(); // Keep incomplete line for next iteration
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6); // Remove 'data: ' prefix
+
+                                try {
+                                    const eventData = JSON.parse(data);
+
+                                    if (eventData.type === 'token') {
+                                        assistantResponse += eventData.content;
+                                        // Update the last message with the current response
+                                        this.updateLastAssistantMessage(assistantResponse);
+                                    } else if (eventData.type === 'sources') {
+                                        // Handle sources if needed
+                                        console.log('Sources:', eventData.sources);
+                                    } else if (eventData.type === 'done') {
+                                        this.updateStatus('Response complete');
+                                        break;
+                                    } else if (eventData.type === 'error') {
+                                        throw new Error(eventData.message);
+                                    }
+                                } catch (parseError) {
+                                    console.error('Error parsing event data:', parseError);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    this.handleError(error);
+                } finally {
+                    // Re-enable input
+                    this.userInput.disabled = false;
+                    this.sendBtn.disabled = false;
+                    this.updateStatus('');
+                }
+            }
+
+            updateLastAssistantMessage(content) {
+                // For simplicity, we'll just update the entire messages div
+                // In a more complex app, we'd track message elements
+                const messages = this.messagesDiv.children;
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    if (!lastMessage.innerHTML.includes('<strong>You:</strong>')) {
+                        lastMessage.innerHTML = `<strong>Assistant:</strong> ${content}`;
+                        return;
+                    }
+                }
+
+                // If no assistant message exists, create one
+                const messageElement = document.createElement('div');
+                messageElement.style.marginBottom = '10px';
+                messageElement.style.padding = '5px';
+                messageElement.innerHTML = `<strong>Assistant:</strong> ${content}`;
+                this.messagesDiv.appendChild(messageElement);
+                this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+            }
+
+            handleError(error) {
+                console.error('Error:', error);
+                this.updateStatus('');
+                this.userInput.disabled = false;
+                this.sendBtn.disabled = false;
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = `Error: ${error.message}`;
+                this.messagesDiv.appendChild(errorDiv);
+                this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+            }
+        }
+
+        // Initialize the chat client when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatClient();
+        });
+    </script>
+</body>
+</html>

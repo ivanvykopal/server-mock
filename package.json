@@ -1,0 +1,28 @@
+{
+    "name": "chatbot-streaming-server",
+    "version": "1.0.0",
+    "description": "A JavaScript server implementing chatbot streaming API with Server-Sent Events",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "csv-parser": "^3.2.0",
+        "express": "^4.18.2",
+        "python-ast": "^0.1.0"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "supertest": "^6.3.3"
+    },
+    "keywords": [
+        "chatbot",
+        "streaming",
+        "sse",
+        "express"
+    ],
+    "author": "Claude",
+    "license": "MIT"
+}

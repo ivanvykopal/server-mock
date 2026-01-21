@@ -1,0 +1,243 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Chatbot Streaming API
+  description: |
+    API for streaming chatbot responses using Server-Sent Events (SSE).
+
+    The streaming endpoint returns Server-Sent Events with the following event types:
+    - `token`: Contains a chunk of the AI response
+    - `done`: Indicates the stream has completed successfully
+    - `error`: Indicates an error occurred during streaming
+    
+    ## Example Stream Response
+    ```
+    data: {"type":"sources","sources":["https://example.com", "https//facebook.com"]}
+
+    data: {"type":"token","content":"Hello"}
+    
+    data: {"type":"token","content":" there!"}
+    
+    data: {"type":"done","conversationId":"conv_123"}
+    ```
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/IVANVYKOPAL/DisAI-AMPLIFIED/1.0.0
+
+tags:
+  - name: Chat
+    description: Chat and streaming endpoints
+  - name: Pipeline
+    description: Pipeline workflow
+
+paths:
+  /v1/chat/stream:
+    post:
+      tags:
+        - Chat
+      summary: Stream chat response
+      description: |
+        Sends a message and receives a streaming response using Server-Sent Events (SSE).
+        
+        The response is streamed in real-time as the AI generates it. Each chunk is sent
+        as a separate SSE event with JSON data.
+      operationId: streamChat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatStreamRequest'
+      responses:
+        '200':
+          description: Successful streaming response (Server-Sent Events)
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: text/event-stream
+            Cache-Control:
+              schema:
+                type: string
+                example: no-cache
+            Connection:
+              schema:
+                type: string
+                example: keep-alive
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream. Each event contains JSON data.
+                  Events are separated by double newlines.
+              examples:
+                successfulStream:
+                  summary: Successful streaming response
+                  value: |
+                    data: {"type":"sources","sources":["https://example.com", "https//facebook.com"]}
+
+                    data: {"type":"token","content":"Artificial"}
+                    
+                    data: {"type":"token","content":" intelligence"}
+                    
+                    data: {"type":"token","content":" is"}
+                    
+                    data: {"type":"done"}
+                    
+                errorStream:
+                  summary: Error during streaming
+                  value: |
+                    data: {"type":"token","content":"Let me"}
+                    
+                    data: {"type":"error","message":"Rate limit exceeded","code":"RATE_LIMIT"}
+                    
+        '400':
+          description: Bad request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidMessage:
+                  value:
+                    error: "Bad Request"
+                    message: "Message cannot be empty"
+                    code: "INVALID_MESSAGE"
+        '401':
+          description: Unauthorized - Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+components:
+  schemas:
+    ChatStreamRequest:
+      type: object
+      required:
+        - message
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          description: Array of messages including conversation history and current user prompt (the user prompt that was sent is the last one)
+          example: [{
+            "role": "user",
+            "content": "What is Artificial Intelligence?"
+          },{
+            "role": "system",
+            "content": "Artificial intelligence is ..."
+          },{
+            "role": "user",
+            "content": "The last user question"
+          }]
+        ids:
+          type: array
+          items:
+            type: string
+          description: Array of IDs of relevant fact-checks
+          example: ["1258", "4589"]
+        collection_name:
+          type: string
+          description: Collection name (used especially for backend). Should be unique (e.g., using timestamp).
+          example: "fact_check_20250620_161634"
+    Message:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, system]
+          description: The role of the message sender
+        content:
+          type: string
+          description: The content of the message
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "Invalid input parameters"
+        code:
+          type: string
+          example: "INVALID_INPUT"
+        details:
+          type: object
+          additionalProperties: true
+    
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or missing authentication token"
+            code: "UNAUTHORIZED"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "The requested resource was not found"
+            code: "NOT_FOUND"
+    
+    RateLimit:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Please try again later"
+            code: "RATE_LIMIT"
+    
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"
+            code: "INTERNAL_ERROR"
