@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const {
   initSSE,
   sendSources,
@@ -10,6 +11,14 @@ const { parseExpression } = require("python-ast");
 require("../mocks/responses");
 
 const router = express.Router();
+
+/**
+ * Generate a unique collection name
+ * @returns {string} A unique collection name
+ */
+function generateUniqueCollectionName() {
+  return 'collection_' + crypto.randomBytes(16).toString('hex');
+}
 
 function pythonLiteralToJson(str) {
   let out = "";
@@ -104,7 +113,15 @@ function safeJSONParse(str) {
  */
 router.post("/stream", async (req, res) => {
   // Validate request body
-  const { messages, ids, collection_name } = req.body;
+  let { messages, ids, collection_name } = req.body;
+
+  // Handle collection name - use provided one or generate unique one
+  if (!collection_name || collection_name.trim() === '') {
+    collection_name = generateUniqueCollectionName();
+    console.log('Generated unique collection name:', collection_name);
+  } else {
+    console.log('Using provided collection name:', collection_name);
+  }
 
   // Check if messages array exists and has at least one message
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -185,7 +202,7 @@ router.post("/stream", async (req, res) => {
         setTimeout(streamToken, delay);
       } else if (tokenIndex >= tokens.length && !res.writableEnded) {
         // Send done event when all tokens are sent
-        sendDone(res);
+        sendDone(res, collection_name);
         res.end();
       }
     };

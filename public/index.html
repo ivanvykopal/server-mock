@@ -98,6 +98,8 @@
                 this.sendBtn = document.getElementById('send-btn');
                 this.statusDiv = document.getElementById('status');
                 this.eventSource = null;
+                this.collectionName = null; // Store the collection name
+                this.messageHistory = []; // Store message history
 
                 this.initializeEventListeners();
             }
@@ -150,14 +152,24 @@
 
                 // Add user message to chat
                 this.addMessage(message, true);
+
+                // Add user message to history
+                this.messageHistory.push({ role: 'user', content: message });
+
                 this.userInput.value = '';
 
                 // Create the request payload
                 const payload = {
-                    messages: [
-                        { role: 'user', content: message }
-                    ]
+                    messages: [...this.messageHistory]
                 };
+
+                // For the first message, send empty collection_name
+                // For subsequent messages, use the collection name from the server
+                if (this.collectionName) {
+                    payload.collection_name = this.collectionName;
+                } else {
+                    payload.collection_name = '';
+                }
 
                 // Close any existing connection
                 if (this.eventSource) {
@@ -227,6 +239,12 @@
                                         // Handle sources if needed
                                         console.log('Sources:', eventData.sources);
                                     } else if (eventData.type === 'done') {
+                                        // Capture the collection name from the server
+                                        if (eventData.collection_name) {
+                                            this.collectionName = eventData.collection_name;
+                                        }
+                                        // Add assistant response to message history
+                                        this.messageHistory.push({ role: 'assistant', content: assistantResponse });
                                         this.updateStatus('Response complete');
                                         break;
                                     } else if (eventData.type === 'error') {

@@ -18,7 +18,7 @@ info:
     
     data: {"type":"token","content":" there!"}
     
-    data: {"type":"done","conversationId":"conv_123"}
+    data: {"type":"done","collection_name":"conv_123"}
     ```
 servers:
   # Added by API Auto Mocking Plugin
@@ -86,7 +86,7 @@ paths:
                     
                     data: {"type":"token","content":" is"}
                     
-                    data: {"type":"done"}
+                    data: {"type":"done", "collection_name":"fact_check_20250620_161634"}
                     
                 errorStream:
                   summary: Error during streaming

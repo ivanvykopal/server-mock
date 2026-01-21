@@ -47,10 +47,10 @@ function sendToken(res, content) {
 /**
  * Send a done event
  * @param {Object} res - Express response object
- * @param {string} conversationId - Conversation ID (optional)
+ * @param {string} collection_name - Collection name (optional)
  */
-function sendDone(res, conversationId = null) {
-  const data = conversationId ? { conversationId } : {};
+function sendDone(res, collection_name = null) {
+  const data = collection_name ? { collection_name } : {};
   sendEvent(res, 'done', data);
 }
 

@@ -68,12 +68,12 @@ describe('SSE Utilities', () => {
     expect(mockRes.write).toHaveBeenCalledWith(`data: ${expectedData}\n\n`);
   });
 
-  test('sendDone should send done event with conversationId', () => {
-    const conversationId = 'conv_123';
+  test('sendDone should send done event with collection_name', () => {
+    const collection_name = 'collection_123';
 
-    sendDone(mockRes, conversationId);
+    sendDone(mockRes, collection_name);
 
-    const expectedData = JSON.stringify({ type: 'done', conversationId });
+    const expectedData = JSON.stringify({ type: 'done', collection_name });
     expect(mockRes.write).toHaveBeenCalledWith(`data: ${expectedData}\n\n`);
   });
 
